@@ -51,6 +51,12 @@ app.use('/api/workouts', workoutRoutes);
 const challengeRoutes = require('./routes/challengeRoutes');
 app.use('/api/challenges', challengeRoutes);
 
+// Friend and notification routes
+const friendRoutes = require('./routes/friendRoutes');
+app.use('/api/friends', friendRoutes);
+
+const notificationRoutes = require('./routes/notificationRoutes');
+app.use('/api/notifications', notificationRoutes);
 
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}`);

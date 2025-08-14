@@ -14,6 +14,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSelector } from 'react-redux';
+import NotificationBadge from '../components/NotificationBadge';
 
 // Assuming these custom components are in separate files or defined here
 const { width } = Dimensions.get('window');
@@ -171,12 +172,21 @@ export default function HomeScreen({ navigation }) {
                 <Text style={styles.greeting}>Good Morning</Text>
                 <Text style={styles.userName}>{user.name}! 👋</Text>
               </View>
-              <TouchableOpacity
-                style={styles.profileButton}
-                onPress={() => navigation?.navigate('Profile')}
-              >
-                <Icon name="person-circle" size={40} color="white" />
-              </TouchableOpacity>
+              <View style={styles.headerButtons}>
+                <TouchableOpacity
+                  style={styles.notificationButton}
+                  onPress={() => navigation?.navigate('Notifications')}
+                >
+                  <Text style={styles.notificationIcon}>🔔</Text>
+                  <NotificationBadge />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.profileButton}
+                  onPress={() => navigation?.navigate('Profile')}
+                >
+                  <Icon name="person-circle" size={40} color="white" />
+                </TouchableOpacity>
+              </View>
             </View>
             <View style={styles.progressSection}>
               <View style={styles.progressRing}>
@@ -367,6 +377,19 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     marginTop: 4,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  notificationButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+  },
+  notificationIcon: {
+    fontSize: 20,
   },
   profileButton: {
     padding: 4,

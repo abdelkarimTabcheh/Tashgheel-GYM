@@ -8,6 +8,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchUserProfile } from '../app/features/userSlice';
 import { signOut } from '../app/features/authSlice';
 import { ActivityIndicator, View, Text, StyleSheet } from 'react-native';
+import NotificationBadge from '../components/NotificationBadge';
 
 // Screens
 import WelcomeScreen from '../screens/welcomeScreen';
@@ -26,6 +27,7 @@ import ChallengeDetailScreen from '../screens/ChallengeDetailScreen';
 import WorkoutDtlScreen from '../screens/workoutDtlScreen';
 import DayDetailScreen from '../screens/DayDetailScreen';
 import StreakLeaderboardScreen from '../screens/StreakLeaderboardScreen';
+import NotificationScreen from '../screens/NotificationScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -112,7 +114,20 @@ function MainTabsNavigator() {
                         default:
                             iconName = 'ellipse-outline';
                     }
-                    return <Ionicons name={iconName} size={size + 2} color={color} />;
+                    
+                    const icon = <Ionicons name={iconName} size={size + 2} color={color} />;
+                    
+                    // Add notification badge to Profile tab
+                    if (route.name === 'Profile') {
+                        return (
+                            <View style={{ position: 'relative' }}>
+                                {icon}
+                                <NotificationBadge />
+                            </View>
+                        );
+                    }
+                    
+                    return icon;
                 },
                 tabBarActiveTintColor: '#5856D6',
                 tabBarInactiveTintColor: '#A0A0A0',
@@ -205,6 +220,7 @@ function MainStackNavigator() {
             <MainStack.Screen name="MainTabs" component={MainTabsNavigator} />
             <MainStack.Screen name="FitnessProfile" component={FitnessProfileScreen} />
             <MainStack.Screen name="ChatBot" component={ChatBotScreen} />
+            <MainStack.Screen name="Notifications" component={NotificationScreen} />
         </MainStack.Navigator>
     );
 }
