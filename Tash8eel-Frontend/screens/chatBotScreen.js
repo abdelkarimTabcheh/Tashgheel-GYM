@@ -89,6 +89,7 @@ function ChatBotScreen() {
       const response = await fetch('https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium', {
         method: 'POST',
         headers: {
+          
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
