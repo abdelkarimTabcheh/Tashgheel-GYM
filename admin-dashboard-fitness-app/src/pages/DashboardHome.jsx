@@ -61,8 +61,8 @@ export default function DashboardHome() {
           <Card elevation={2}>
             <CardContent sx={{ textAlign: 'center' }}>
               <Typography variant="h3" color="warning.main">💪</Typography>
-              <Typography variant="subtitle2" color="text.secondary">Total Exercises</Typography>
-              <Typography variant="h5" color="warning.main">{stats?.totalExercises || 0}</Typography>
+              <Typography variant="subtitle2" color="text.secondary">Total Workouts</Typography>
+              <Typography variant="h5" color="warning.main">{stats?.totalWorkouts || 0}</Typography>
               <Chip label={`in ${stats?.categories || 0} categories`} color="info" size="small" sx={{ mt: 1 }} />
             </CardContent>
           </Card>
@@ -111,13 +111,13 @@ export default function DashboardHome() {
         </Grid>
         <Grid item xs={12} md={4}>
           <Card elevation={2}>
-            <CardHeader title={<Typography variant="h6">Popular Exercises</Typography>} />
+            <CardHeader title={<Typography variant="h6">Popular Workouts</Typography>} />
             <Divider />
             <CardContent>
-              {stats?.popularExercises?.length ? stats.popularExercises.map((exercise) => (
-                <Box key={exercise.id} display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                  <Typography>{exercise.name}</Typography>
-                  <Chip label={exercise.count} color="primary" size="small" />
+              {stats?.popularWorkouts?.length ? stats.popularWorkouts.map((workout) => (
+                <Box key={workout.id} display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                  <Typography>{workout.name}</Typography>
+                  <Chip label={workout.count} color="primary" size="small" />
                 </Box>
               )) : <Typography color="text.secondary">No data</Typography>}
             </CardContent>
