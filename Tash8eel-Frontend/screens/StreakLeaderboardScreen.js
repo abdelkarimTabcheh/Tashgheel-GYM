@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  SafeAreaView,
-  ScrollView,
+  SafeAreaView, ScrollView,
   Text,
   View,
   Image,
