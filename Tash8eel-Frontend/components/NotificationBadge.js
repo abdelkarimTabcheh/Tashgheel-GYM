@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { useSelector } from 'react-redux';
 import { getUnreadNotificationCount } from '../services/notificationService';
 
-const NotificationBadge = ({ style }) => {
+const NotificationBadge = ({ style, refreshTrigger }) => {
   const [unreadCount, setUnreadCount] = useState(0);
   const token = useSelector(state => state.auth.token);
 
@@ -11,7 +11,7 @@ const NotificationBadge = ({ style }) => {
     if (token) {
       fetchUnreadCount();
     }
-  }, [token]);
+  }, [token, refreshTrigger]);
 
   const fetchUnreadCount = async () => {
     try {

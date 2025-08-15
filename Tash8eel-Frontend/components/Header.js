@@ -13,7 +13,7 @@ import { getUnreadNotificationCount } from '../services/notificationService';
  * @param {function} onNotificationPress An optional function to handle notification button press.
  * @param {boolean} showNotificationIcon Whether to show the notification icon.
  */
-export default function Header({ title, onBackPress, onNotificationPress, showNotificationIcon = false }) {
+export default function Header({ title, onBackPress, onNotificationPress, showNotificationIcon = false, refreshTrigger }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const token = useSelector(state => state.auth.token);
 
@@ -21,7 +21,7 @@ export default function Header({ title, onBackPress, onNotificationPress, showNo
     if (showNotificationIcon && token) {
       fetchUnreadCount();
     }
-  }, [showNotificationIcon, token]);
+  }, [showNotificationIcon, token, refreshTrigger]);
 
   const fetchUnreadCount = async () => {
     try {

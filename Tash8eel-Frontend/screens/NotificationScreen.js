@@ -32,6 +32,7 @@ const NotificationScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const currentUserId = useSelector(s => s.user.profile?._id);
   const authToken = useSelector(s => s.auth.token);
 
@@ -80,6 +81,7 @@ const NotificationScreen = ({ navigation }) => {
         )
       );
       fetchUnreadCount();
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -92,6 +94,7 @@ const NotificationScreen = ({ navigation }) => {
         prev.map(notification => ({ ...notification, isRead: true }))
       );
       setUnreadCount(0);
+      setRefreshTrigger(prev => prev + 1);
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -106,6 +109,10 @@ const NotificationScreen = ({ navigation }) => {
       setNotifications(prev => 
         prev.filter(n => n._id !== notification._id)
       );
+      
+      // Refresh unread count
+      fetchUnreadCount();
+      setRefreshTrigger(prev => prev + 1);
       
       Alert.alert('Success', 'Friend request accepted!');
     } catch (error) {
@@ -123,6 +130,10 @@ const NotificationScreen = ({ navigation }) => {
       setNotifications(prev => 
         prev.filter(n => n._id !== notification._id)
       );
+      
+      // Refresh unread count
+      fetchUnreadCount();
+      setRefreshTrigger(prev => prev + 1);
       
       Alert.alert('Success', 'Friend request rejected');
     } catch (error) {
@@ -213,7 +224,7 @@ const NotificationScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Header title="Notifications" onBackPress={() => navigation.goBack()} />
+      <Header title="Notifications" onBackPress={() => navigation.goBack()} refreshTrigger={refreshTrigger} />
       
       {unreadCount > 0 && (
         <View style={styles.unreadBanner}>
@@ -265,11 +276,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     marginHorizontal: 16,
     marginTop: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
   unreadBannerText: {
     color: '#fff',
@@ -289,14 +305,14 @@ const styles = StyleSheet.create({
   },
   notificationItem: {
     backgroundColor: colors.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
   },
   unreadNotification: {
     borderLeftWidth: 4,
@@ -307,31 +323,36 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   notificationIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: colors.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   iconText: {
-    fontSize: 20,
+    fontSize: 24,
   },
   notificationContent: {
     flex: 1,
   },
   notificationTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   notificationMessage: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.textSecondary,
-    marginBottom: 8,
-    lineHeight: 20,
+    marginBottom: 10,
+    lineHeight: 22,
   },
   notificationTime: {
     fontSize: 12,
@@ -347,15 +368,20 @@ const styles = StyleSheet.create({
   },
   friendRequestActions: {
     flexDirection: 'row',
-    marginTop: 12,
-    gap: 8,
+    marginTop: 16,
+    gap: 12,
   },
   actionButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   acceptButton: {
     backgroundColor: '#4CAF50',
@@ -365,27 +391,38 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
   },
   emptyState: {
     alignItems: 'center',
-    padding: 40,
+    padding: 60,
+    backgroundColor: colors.card,
+    marginHorizontal: 16,
+    marginTop: 20,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+    fontSize: 64,
+    marginBottom: 20,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 20,
+    fontWeight: '700',
     color: colors.text,
-    marginBottom: 8,
+    marginBottom: 12,
+    textAlign: 'center',
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.textSecondary,
     textAlign: 'center',
+    lineHeight: 22,
   },
 });
 

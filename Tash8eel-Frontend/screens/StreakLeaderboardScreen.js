@@ -30,6 +30,7 @@ const StreakLeaderboardScreen = ({ navigation }) => {
   const [searching, setSearching] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [activeTab, setActiveTab] = useState('all'); // 'all' or 'friends'
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const currentUserId = useSelector(s => s.user.profile?._id);
   const authToken = useSelector(s => s.auth.token);
 
@@ -67,14 +68,7 @@ const StreakLeaderboardScreen = ({ navigation }) => {
     }
   }, [authToken]);
 
-  // Debug function to check authentication status
-  const debugAuth = () => {
-    console.log('=== DEBUG AUTH ===');
-    console.log('Auth token exists:', !!authToken);
-    console.log('Current user ID:', currentUserId);
-    console.log('Token length:', authToken ? authToken.length : 0);
-    console.log('==================');
-  };
+
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -113,7 +107,7 @@ const StreakLeaderboardScreen = ({ navigation }) => {
       
       const result = await sendFriendRequest(userId, authToken);
       console.log('Friend request result:', result);
-      Alert.alert('Success', 'Friend request sent successfully!');
+      
       // Update search results to show updated status
       setSearchResults(prev => 
         prev.map(user => 
@@ -122,6 +116,20 @@ const StreakLeaderboardScreen = ({ navigation }) => {
             : user
         )
       );
+      
+      // Update all users leaderboard to show updated status
+      setAllUsersLeaderboard(prev => 
+        prev.map(user => 
+          user._id === userId 
+            ? { ...user, friendStatus: 'pending' }
+            : user
+        )
+      );
+      
+      // Trigger notification badge refresh
+      setRefreshTrigger(prev => prev + 1);
+      
+      Alert.alert('Success', 'Friend request sent successfully!');
     } catch (error) {
       console.error('Error sending friend request:', error);
       const errorMessage = error.message || 'Failed to send friend request';
@@ -269,6 +277,7 @@ const StreakLeaderboardScreen = ({ navigation }) => {
         onBackPress={() => navigation.goBack()}
         showNotificationIcon={true}
         onNotificationPress={() => navigation.navigate('Notifications')}
+        refreshTrigger={refreshTrigger}
       />
       
       {/* Search Bar */}
@@ -285,12 +294,6 @@ const StreakLeaderboardScreen = ({ navigation }) => {
           onPress={() => setShowSearchModal(true)}
         >
           <Text style={styles.searchButtonText}>🔍</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={styles.debugButton}
-          onPress={debugAuth}
-        >
-          <Text style={styles.debugButtonText}>🐛</Text>
         </TouchableOpacity>
       </View>
 
@@ -407,70 +410,69 @@ const StreakLeaderboardScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#f8f9fa',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: '#f8f9fa',
   },
   searchContainer: {
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: colors.card,
-    marginHorizontal: 16,
+    padding: 12,
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: colors.text,
+    color: '#333',
     paddingVertical: 8,
+    paddingHorizontal: 8,
   },
   searchButton: {
     padding: 8,
     marginLeft: 8,
+    backgroundColor: '#667eea',
+    borderRadius: 8,
   },
   searchButtonText: {
     fontSize: 20,
   },
-  debugButton: {
-    padding: 8,
-    marginLeft: 4,
-    backgroundColor: '#FF6B35',
-    borderRadius: 8,
-  },
-  debugButtonText: {
-    fontSize: 16,
-  },
   tabContainer: {
     flexDirection: 'row',
-    marginHorizontal: 16,
+    marginHorizontal: 20,
     marginTop: 16,
-    backgroundColor: colors.card,
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     padding: 4,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    paddingVertical: 10,
     alignItems: 'center',
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#667eea',
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: '#666',
   },
   activeTabText: {
     color: '#fff',
@@ -479,50 +481,78 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 24,
+    padding: 32,
     alignItems: 'center',
+    backgroundColor: '#667eea',
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 6,
   },
   title: {
     fontSize: 28,
-    fontWeight: '700',
-    color: colors.text,
+    fontWeight: '800',
+    color: '#fff',
     marginBottom: 8,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: 'rgba(255, 255, 255, 0.9)',
+    textAlign: 'center',
+    lineHeight: 22,
+    fontWeight: '500',
   },
   leaderboardItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.card,
-    marginHorizontal: 16,
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
     marginVertical: 6,
     padding: 16,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   currentUserItem: {
     borderWidth: 2,
-    borderColor: '#FF6B35',
+    borderColor: '#667eea',
+    backgroundColor: '#f8f9ff',
+    shadowColor: '#667eea',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
   },
   rankContainer: {
     width: 40,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   rankText: {
     fontSize: 18,
     fontWeight: '700',
+    color: '#333',
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     marginHorizontal: 12,
+    borderWidth: 2,
+    borderColor: '#e0e0e0',
   },
   userInfo: {
     flex: 1,
@@ -530,16 +560,21 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
-    marginBottom: 8,
+    color: '#333',
+    marginBottom: 6,
   },
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 8,
   },
   stat: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     flex: 1,
   },
   statEmoji: {
@@ -549,25 +584,32 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.textSecondary,
+    color: '#555',
   },
   friendButton: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 8,
     borderRadius: 8,
     marginLeft: 8,
+    minWidth: 80,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   addFriendButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#667eea',
   },
   pendingButton: {
-    backgroundColor: '#FFA500',
+    backgroundColor: '#ff9500',
   },
   friendsButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#34c759',
   },
   rejectedButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#ff3b30',
   },
   friendButtonText: {
     color: '#fff',
@@ -577,17 +619,30 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     padding: 40,
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#f0f0f0',
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.text,
+    color: '#333',
     marginBottom: 8,
+    textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: colors.textSecondary,
+    color: '#666',
     textAlign: 'center',
+    lineHeight: 20,
   },
   // Modal styles
   modalOverlay: {
@@ -596,11 +651,16 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.background,
+    backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 20,
     maxHeight: '80%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -621,12 +681,14 @@ const styles = StyleSheet.create({
   },
   modalSearchInput: {
     fontSize: 16,
-    color: colors.text,
-    padding: 16,
+    color: '#333',
+    padding: 12,
     marginHorizontal: 20,
-    backgroundColor: colors.card,
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   searchingContainer: {
     flexDirection: 'row',
@@ -644,15 +706,21 @@ const styles = StyleSheet.create({
   searchResultItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
+    padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.card,
+    borderBottomColor: '#f0f0f0',
+    backgroundColor: '#fff',
+    marginHorizontal: 20,
+    marginVertical: 2,
+    borderRadius: 12,
   },
   searchAvatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     marginRight: 12,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
   },
   searchUserInfo: {
     flex: 1,
@@ -660,12 +728,13 @@ const styles = StyleSheet.create({
   searchUserName: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.text,
+    color: '#333',
+    marginBottom: 2,
   },
   searchUserEmail: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: 2,
+    fontSize: 13,
+    color: '#666',
+    lineHeight: 16,
   },
   noResultsContainer: {
     padding: 40,

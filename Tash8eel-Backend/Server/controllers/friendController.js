@@ -44,13 +44,16 @@ const sendFriendRequest = async (req, res) => {
 
     await friendRequest.save();
 
+    // Get requester's name for notification
+    const requester = await User.findById(requesterId).select('name');
+    
     // Create notification
     const notification = new Notification({
       recipient: recipientId,
       sender: requesterId,
       type: 'friend_request',
       title: 'New Friend Request',
-      message: `${req.user.name || 'Someone'} sent you a friend request`,
+      message: `${requester.name || 'Someone'} sent you a friend request`,
       relatedData: { friendRequestId: friendRequest._id }
     });
 
@@ -90,13 +93,16 @@ const acceptFriendRequest = async (req, res) => {
     friendRequest.status = 'accepted';
     await friendRequest.save();
 
+    // Get acceptor's name for notification
+    const acceptor = await User.findById(userId).select('name');
+    
     // Create notification for requester
     const notification = new Notification({
       recipient: friendRequest.requester,
       sender: userId,
       type: 'friend_accepted',
       title: 'Friend Request Accepted',
-      message: `${req.user.name || 'Someone'} accepted your friend request`,
+      message: `${acceptor.name || 'Someone'} accepted your friend request`,
       relatedData: { friendRequestId: friendRequest._id }
     });
 
@@ -136,13 +142,16 @@ const rejectFriendRequest = async (req, res) => {
     friendRequest.status = 'rejected';
     await friendRequest.save();
 
+    // Get rejector's name for notification
+    const rejector = await User.findById(userId).select('name');
+    
     // Create notification for requester
     const notification = new Notification({
       recipient: friendRequest.requester,
       sender: userId,
       type: 'friend_rejected',
       title: 'Friend Request Rejected',
-      message: `${req.user.name || 'Someone'} rejected your friend request`,
+      message: `${rejector.name || 'Someone'} rejected your friend request`,
       relatedData: { friendRequestId: friendRequest._id }
     });
 
