@@ -1,8 +1,19 @@
 // src/pages/DashboardHome.jsx (Enhanced)
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDashboardStats } from '../redux/dashboardSlice';
-import { Card, Row, Col, Spinner, Alert } from 'react-bootstrap';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Grid,
+  Typography,
+  Box,
+  CircularProgress,
+  Alert,
+  Chip,
+  Divider
+} from '@mui/material';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DashboardHome() {
@@ -11,106 +22,108 @@ export default function DashboardHome() {
 
   useEffect(() => {
     dispatch(fetchDashboardStats());
-    
-    // Set up real-time updates every 30 seconds
     const interval = setInterval(() => {
       dispatch(fetchDashboardStats());
     }, 30000);
-
     return () => clearInterval(interval);
   }, [dispatch]);
 
-  if (loading) return <Spinner animation="border" />;
-  if (error) return <Alert variant="danger">{error}</Alert>;
+  if (loading) return (
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
+      <CircularProgress />
+      <Typography variant="h6" ml={2}>Loading dashboard...</Typography>
+    </Box>
+  );
+  if (error) return (
+    <Box display="flex" justifyContent="center" alignItems="center" minHeight="40vh">
+      <Alert severity="error">{error}</Alert>
+    </Box>
+  );
 
   return (
-    <div className="container py-5">
-      <h2 className="mb-4">Dashboard Overview</h2>
-      
+    <Box py={4} px={{ xs: 1, md: 3 }}>
+      <Typography variant="h4" fontWeight={700} mb={4} color="primary.main">
+        Dashboard Overview
+      </Typography>
       {/* Stats Cards */}
-      <Row className="g-4 mb-5">
-        <Col md={3}>
-          <Card className="shadow-sm border-0">
-            <Card.Body className="text-center">
-              <div className="text-primary fs-1">👥</div>
-              <h5 className="card-title text-muted">Total Users</h5>
-              <p className="display-6 text-primary">{stats?.totalUsers || 0}</p>
-              <small className="text-success">+{stats?.newUsersToday || 0} today</small>
-            </Card.Body>
+      <Grid container spacing={3} mb={4}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={2}>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h3" color="primary">👥</Typography>
+              <Typography variant="subtitle2" color="text.secondary">Total Users</Typography>
+              <Typography variant="h5" color="primary.main">{stats?.totalUsers || 0}</Typography>
+              <Chip label={`+${stats?.newUsersToday || 0} today`} color="success" size="small" sx={{ mt: 1 }} />
+            </CardContent>
           </Card>
-        </Col>
-        
-        <Col md={3}>
-          <Card className="shadow-sm border-0">
-            <Card.Body className="text-center">
-              <div className="text-warning fs-1">💪</div>
-              <h5 className="card-title text-muted">Total Exercises</h5>
-              <p className="display-6 text-warning">{stats?.totalExercises || 0}</p>
-              <small className="text-info">Across {stats?.categories || 0} categories</small>
-            </Card.Body>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={2}>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h3" color="warning.main">💪</Typography>
+              <Typography variant="subtitle2" color="text.secondary">Total Exercises</Typography>
+              <Typography variant="h5" color="warning.main">{stats?.totalExercises || 0}</Typography>
+              <Chip label={`in ${stats?.categories || 0} categories`} color="info" size="small" sx={{ mt: 1 }} />
+            </CardContent>
           </Card>
-        </Col>
-        
-        <Col md={3}>
-          <Card className="shadow-sm border-0">
-            <Card.Body className="text-center">
-              <div className="text-success fs-1">📱</div>
-              <h5 className="card-title text-muted">Active Sessions</h5>
-              <p className="display-6 text-success">{stats?.activeSessions || 0}</p>
-              <small className="text-muted">Last 24h</small>
-            </Card.Body>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={2}>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h3" color="success.main">📱</Typography>
+              <Typography variant="subtitle2" color="text.secondary">Active Sessions</Typography>
+              <Typography variant="h5" color="success.main">{stats?.activeSessions || 0}</Typography>
+              <Chip label="Last 24h" color="default" size="small" sx={{ mt: 1 }} />
+            </CardContent>
           </Card>
-        </Col>
-        
-        <Col md={3}>
-          <Card className="shadow-sm border-0">
-            <Card.Body className="text-center">
-              <div className="text-danger fs-1">🔥</div>
-              <h5 className="card-title text-muted">Workouts Today</h5>
-              <p className="display-6 text-danger">{stats?.workoutsToday || 0}</p>
-              <small className="text-success">↗️ +12% vs yesterday</small>
-            </Card.Body>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card elevation={2}>
+            <CardContent sx={{ textAlign: 'center' }}>
+              <Typography variant="h3" color="error.main">🔥</Typography>
+              <Typography variant="subtitle2" color="text.secondary">Workouts Today</Typography>
+              <Typography variant="h5" color="error.main">{stats?.workoutsToday || 0}</Typography>
+              <Chip label="↗️ +12% vs yesterday" color="success" size="small" sx={{ mt: 1 }} />
+            </CardContent>
           </Card>
-        </Col>
-      </Row>
-
+        </Grid>
+      </Grid>
       {/* Charts */}
-      <Row>
-        <Col md={8}>
-          <Card className="shadow-sm">
-            <Card.Header>
-              <h5>User Activity (Last 7 Days)</h5>
-            </Card.Header>
-            <Card.Body>
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={stats?.userActivity || []}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="users" stroke="#8884d8" strokeWidth={2} />
-                </LineChart>
-              </ResponsiveContainer>
-            </Card.Body>
+      <Grid container spacing={3}>
+        <Grid item xs={12} md={8}>
+          <Card elevation={2}>
+            <CardHeader title={<Typography variant="h6">User Activity (Last 7 Days)</Typography>} />
+            <Divider />
+            <CardContent>
+              <Box sx={{ width: '100%', height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={stats?.userActivity || []}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line type="monotone" dataKey="users" stroke="#1976d2" strokeWidth={2} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
           </Card>
-        </Col>
-        
-        <Col md={4}>
-          <Card className="shadow-sm">
-            <Card.Header>
-              <h5>Popular Exercises</h5>
-            </Card.Header>
-            <Card.Body>
-              {stats?.popularExercises?.map((exercise, index) => (
-                <div key={exercise.id} className="d-flex justify-content-between align-items-center mb-2">
-                  <span>{exercise.name}</span>
-                  <span className="badge bg-primary">{exercise.count}</span>
-                </div>
-              ))}
-            </Card.Body>
+        </Grid>
+        <Grid item xs={12} md={4}>
+          <Card elevation={2}>
+            <CardHeader title={<Typography variant="h6">Popular Exercises</Typography>} />
+            <Divider />
+            <CardContent>
+              {stats?.popularExercises?.length ? stats.popularExercises.map((exercise) => (
+                <Box key={exercise.id} display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                  <Typography>{exercise.name}</Typography>
+                  <Chip label={exercise.count} color="primary" size="small" />
+                </Box>
+              )) : <Typography color="text.secondary">No data</Typography>}
+            </CardContent>
           </Card>
-        </Col>
-      </Row>
-    </div>
+        </Grid>
+      </Grid>
+    </Box>
   );
 }

@@ -31,5 +31,26 @@ API.interceptors.response.use(
 
 export default API;
 
-export const fetchHomeConfig = () => API.get('/home-config');
-export const updateHomeConfig = (config) => API.put('/home-config', config);
+export const fetchHomeConfig = async () => {
+  try {
+    console.log('Fetching home config from:', '/admin/home-config');
+    const response = await API.get('/admin/home-config');
+    console.log('Home config response:', response.data);
+    return response;
+  } catch (error) {
+    console.error('Failed to fetch home config:', error.response?.status, error.response?.data);
+    throw error;
+  }
+};
+
+export const updateHomeConfig = async (config) => {
+  try {
+    console.log('Updating home config:', config);
+    const response = await API.put('/admin/home-config', config);
+    console.log('Update home config response:', response.data);
+    return response;
+  } catch (error) {
+    console.error('Failed to update home config:', error.response?.status, error.response?.data);
+    throw error;
+  }
+};

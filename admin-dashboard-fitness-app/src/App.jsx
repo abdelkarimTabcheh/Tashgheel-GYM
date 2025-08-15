@@ -2,10 +2,11 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Users from './pages/Users';
-import Exercises from './pages/Exercises';
 import HomeScreenConfig from './pages/HomeScreenConfig';
 import Workouts from './pages/Workouts';
 import SignIn from './pages/SignIn';
+import Challenges from './pages/Challenges';
+import DashboardHome from './pages/DashboardHome';
 import { useSelector } from 'react-redux';
 
 function App() {
@@ -18,10 +19,11 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/users" element={<Users />} />
-            <Route path="/workouts" element={<Workouts />}></Route>
-            <Route path="/exercises" element={<Exercises />} />
+            <Route path="/workouts" element={<Workouts />} />
+            <Route path="/challenges" element={<Challenges />} />
             <Route path="/home-config" element={<HomeScreenConfig />} />
-            <Route path="*" element={<Navigate to="/users" />} />
+            <Route path="/dashboard" element={<DashboardHome />} />
+            <Route path="*" element={<Navigate to="/dashboard" />} />
           </Routes>
         </Layout>
       ) : (

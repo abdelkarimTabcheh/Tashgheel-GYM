@@ -1,7 +1,6 @@
 //components/Navbar.jsx
 import React from 'react';
-import { Navbar, Container, Nav, Button } from 'react-bootstrap';
-import { LinkContainer } from 'react-router-bootstrap';
+import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout } from '../redux/authSlice.js';
 
@@ -10,36 +9,33 @@ const AppNavbar = ({ onToggleSidebar }) => {
   const user = useSelector(state => state.auth.user);
 
   return (
-    <Navbar bg="primary" variant="dark" expand="md" className="mb-3">
-      <Container fluid>
-        <Button variant="outline-light" className="d-md-none me-2" onClick={onToggleSidebar}>
-          ☰
-        </Button>
-        <Navbar.Brand href="/">API Generator</Navbar.Brand>
-        <Navbar.Toggle />
-        <Navbar.Collapse className="justify-content-end">
-          {user ? (
-            <>
-              <Navbar.Text className="me-3">
-                Signed in as: <strong>{user.name || user.email}</strong>
-              </Navbar.Text>
-              <Button variant="outline-light" onClick={() => dispatch(logout())}>
-                Logout
-              </Button>
-            </>
-          ) : (
-            <Nav>
-              <LinkContainer to="/signin">
-                <Nav.Link>Sign In</Nav.Link>
-              </LinkContainer>
-              <LinkContainer to="/signup">
-                <Nav.Link>Sign Up</Nav.Link>
-              </LinkContainer>
-            </Nav>
-          )}
-        </Navbar.Collapse>
-      </Container>
-    </Navbar>
+    <AppBar position="static" color="default" elevation={1}>
+      <Toolbar sx={{ display: 'flex', justifyContent: 'space-between' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            sx={{ display: { md: 'none' }, mr: 2 }}
+            onClick={onToggleSidebar}
+          >
+            ☰
+          </Button>
+          <Typography variant="h6" color="primary" fontWeight={700}>
+            Tash8eel Admin
+          </Typography>
+        </Box>
+        {user && (
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Typography variant="body1" color="text.secondary" sx={{ mr: 2 }}>
+              Signed in as: <strong>{user.name || user.email}</strong>
+            </Typography>
+            <Button variant="outlined" color="primary" onClick={() => dispatch(logout())}>
+              Logout
+            </Button>
+          </Box>
+        )}
+      </Toolbar>
+    </AppBar>
   );
 };
 

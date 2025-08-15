@@ -32,7 +32,7 @@ import CreateUser from '../components/CreateUser';
 export default function Users() {
   const dispatch = useDispatch();
   const { list: users, status, error } = useSelector((state) => state.users);
-  const token = useSelector((state) => state.auth.token); // <- get token from Redux
+  const token = useSelector((state) => state.auth.token);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState(null);
@@ -40,9 +40,10 @@ export default function Users() {
   const [userToDelete, setUserToDelete] = useState(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
+  const [dense, setDense] = useState(false);
 
   useEffect(() => {
-    if (status === 'idle' && token) { // <- wait for token before fetching
+    if (status === 'idle' && token) {
       dispatch(fetchUsers());
     }
   }, [dispatch, status, token]);
@@ -124,48 +125,62 @@ export default function Users() {
   }
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" mb={3}>Users</Typography>
-
-      <Button
-        variant="contained"
-        color="primary"
-        startIcon={<AddIcon />}
-        sx={{ mb: 2 }}
-        onClick={handleCreateClick}
-      >
-        Create User
-      </Button>
-
+    <Box p={{ xs: 1, md: 3 }}>
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
+        <Typography variant="h4" fontWeight={700}>Users</Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={handleCreateClick}
+          sx={{ borderRadius: 2 }}
+        >
+          Create User
+        </Button>
+      </Box>
+      <Box mb={2} display="flex" alignItems="center" gap={2}>
+        <Typography variant="body2">Dense Table</Typography>
+        <Button
+          variant={dense ? 'contained' : 'outlined'}
+          size="small"
+          onClick={() => setDense((d) => !d)}
+        >
+          {dense ? 'On' : 'Off'}
+        </Button>
+      </Box>
       {users.length === 0 ? (
         <Typography>No users found.</Typography>
       ) : (
-        <TableContainer component={Paper}>
-          <Table aria-label="Users Table">
+        <TableContainer component={Paper} elevation={2}>
+          <Table aria-label="Users Table" size={dense ? 'small' : 'medium'}>
             <TableHead>
               <TableRow>
                 <TableCell>Email</TableCell>
                 <TableCell>Name</TableCell>
-                <TableCell>Role</TableCell>
+                <TableCell>Age</TableCell>
+                <TableCell>Goal</TableCell>
+                <TableCell>Activity Level</TableCell>
                 <TableCell>Admin</TableCell>
                 <TableCell align="right">Actions</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {users.map((user) => (
-                <TableRow key={user._id}>
+                <TableRow key={user._id} hover tabIndex={-1}>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>{user.name || '-'}</TableCell>
-                  <TableCell>{user.role || '-'}</TableCell>
+                  <TableCell>{user.age || '-'}</TableCell>
+                  <TableCell>{user.goal || '-'}</TableCell>
+                  <TableCell>{user.activityLevel || '-'}</TableCell>
                   <TableCell>{user.isAdmin ? 'Yes' : 'No'}</TableCell>
                   <TableCell align="right">
                     <Tooltip title="Edit">
-                      <IconButton color="primary" onClick={() => handleEditClick(user)}>
+                      <IconButton color="primary" onClick={() => handleEditClick(user)} aria-label="edit user">
                         <EditIcon />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Delete">
-                      <IconButton color="error" onClick={() => handleDeleteClick(user._id)}>
+                      <IconButton color="error" onClick={() => handleDeleteClick(user._id)} aria-label="delete user">
                         <DeleteIcon />
                       </IconButton>
                     </Tooltip>
@@ -176,10 +191,8 @@ export default function Users() {
           </Table>
         </TableContainer>
       )}
-
       <CreateUser open={createDialogOpen} onClose={handleCreateClose} onCreate={handleCreateSave} />
       <EditUser open={editDialogOpen} onClose={handleEditClose} user={userToEdit} onSave={handleEditSave} />
-
       <Dialog
         open={deleteConfirmOpen}
         onClose={handleDeleteCancel}
@@ -199,7 +212,6 @@ export default function Users() {
           </Button>
         </DialogActions>
       </Dialog>
-
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
