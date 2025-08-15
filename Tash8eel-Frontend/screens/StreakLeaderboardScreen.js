@@ -16,9 +16,30 @@ import {
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { API_BASE_URL_JO } from '../config';
-import { colors } from '../theme/colors';
 import Header from '../components/Header';
 import { sendFriendRequest, searchUsers, getFriendLeaderboard } from '../services/friendService';
+
+// Dark mode colors
+const darkColors = {
+  background: '#000000',
+  surface: '#1a1a1a',
+  card: '#2a2a2a',
+  primary: '#667eea',
+  primaryDark: '#5a6fd8',
+  text: '#ffffff',
+  textSecondary: '#b0b0b0',
+  textMuted: '#666666',
+  border: '#333333',
+  success: '#34c759',
+  warning: '#ff9500',
+  error: '#ff3b30',
+  shadow: 'rgba(0, 0, 0, 0.8)',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  accent: '#667eea',
+  cardHighlight: '#333333',
+  inputBackground: '#2a2a2a',
+  modalBackground: '#1a1a1a',
+};
 
 const StreakLeaderboardScreen = ({ navigation }) => {
   const [allUsersLeaderboard, setAllUsersLeaderboard] = useState([]);
@@ -67,8 +88,6 @@ const StreakLeaderboardScreen = ({ navigation }) => {
       fetchLeaderboards();
     }
   }, [authToken]);
-
-
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -146,26 +165,28 @@ const StreakLeaderboardScreen = ({ navigation }) => {
     }
   };
 
-  const getFriendButtonText = (friendStatus) => {
+  const getFriendButtonIcon = (friendStatus) => {
     switch (friendStatus) {
-      case 'pending': return 'Request Sent';
-      case 'accepted': return 'Friends';
-      case 'rejected': return 'Request Rejected';
-      default: return 'Add Friend';
+      case 'pending': return '📤'; // Sent icon
+      case 'accepted': return null; // No button for existing friends
+      case 'rejected': return '❌';
+      default: return '➕'; // Add friend icon (Facebook-style plus)
     }
   };
 
   const getFriendButtonStyle = (friendStatus) => {
     switch (friendStatus) {
-      case 'pending': return styles.pendingButton;
-      case 'accepted': return styles.friendsButton;
-      case 'rejected': return styles.rejectedButton;
-      default: return styles.addFriendButton;
+      case 'pending': return [styles.friendIconButton, styles.pendingIconButton];
+      case 'accepted': return null; // No button for existing friends
+      case 'rejected': return [styles.friendIconButton, styles.rejectedIconButton];
+      default: return [styles.friendIconButton, styles.addFriendIconButton];
     }
   };
 
   const LeaderboardItem = ({ user, index, showAddFriend = false }) => {
     const isCurrentUser = user._id === currentUserId;
+    // Hide button for current user, friends (accepted status), or when showAddFriend is false
+    const shouldShowButton = showAddFriend && !isCurrentUser && user.friendStatus !== 'accepted' && user.friendStatus !== 'friends';
     
     return (
       <View style={[styles.leaderboardItem, isCurrentUser && styles.currentUserItem]}>
@@ -202,17 +223,14 @@ const StreakLeaderboardScreen = ({ navigation }) => {
           </View>
         </View>
 
-        {showAddFriend && !isCurrentUser && (
+        {shouldShowButton && (
           <TouchableOpacity
-            style={[
-              styles.friendButton,
-              getFriendButtonStyle(user.friendStatus)
-            ]}
+            style={getFriendButtonStyle(user.friendStatus)}
             onPress={() => handleSendFriendRequest(user._id)}
-            disabled={user.friendStatus === 'pending' || user.friendStatus === 'accepted'}
+            disabled={user.friendStatus === 'pending'}
           >
-            <Text style={styles.friendButtonText}>
-              {getFriendButtonText(user.friendStatus)}
+            <Text style={styles.friendIconText}>
+              {getFriendButtonIcon(user.friendStatus)}
             </Text>
           </TouchableOpacity>
         )}
@@ -222,6 +240,8 @@ const StreakLeaderboardScreen = ({ navigation }) => {
 
   const SearchResultItem = ({ user }) => {
     const isCurrentUser = user._id === currentUserId;
+    // Hide button for current user and friends (accepted status or 'friends' status)
+    const shouldShowButton = !isCurrentUser && user.friendStatus !== 'accepted' && user.friendStatus !== 'friends';
     
     return (
       <View style={styles.searchResultItem}>
@@ -241,17 +261,14 @@ const StreakLeaderboardScreen = ({ navigation }) => {
           <Text style={styles.searchUserEmail}>{user.email}</Text>
         </View>
 
-        {!isCurrentUser && (
+        {shouldShowButton && (
           <TouchableOpacity
-            style={[
-              styles.friendButton,
-              getFriendButtonStyle(user.friendStatus)
-            ]}
+            style={getFriendButtonStyle(user.friendStatus)}
             onPress={() => handleSendFriendRequest(user._id)}
-            disabled={user.friendStatus === 'pending' || user.friendStatus === 'accepted'}
+            disabled={user.friendStatus === 'pending'}
           >
-            <Text style={styles.friendButtonText}>
-              {getFriendButtonText(user.friendStatus)}
+            <Text style={styles.friendIconText}>
+              {getFriendButtonIcon(user.friendStatus)}
             </Text>
           </TouchableOpacity>
         )}
@@ -265,7 +282,7 @@ const StreakLeaderboardScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <Header title="Leaderboard" onBackPress={() => navigation.goBack()} />
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={darkColors.primary} />
       </SafeAreaView>
     );
   }
@@ -285,6 +302,7 @@ const StreakLeaderboardScreen = ({ navigation }) => {
         <TextInput
           style={styles.searchInput}
           placeholder="Search users to add friends..."
+          placeholderTextColor={darkColors.textMuted}
           value={searchQuery}
           onChangeText={handleSearch}
           onFocus={() => setShowSearchModal(true)}
@@ -320,7 +338,12 @@ const StreakLeaderboardScreen = ({ navigation }) => {
       <ScrollView
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={darkColors.primary}
+            colors={[darkColors.primary]}
+          />
         }
       >
         <View style={styles.header}>
@@ -375,6 +398,7 @@ const StreakLeaderboardScreen = ({ navigation }) => {
             <TextInput
               style={styles.modalSearchInput}
               placeholder="Search by name or email..."
+              placeholderTextColor={darkColors.textMuted}
               value={searchQuery}
               onChangeText={handleSearch}
               autoFocus
@@ -382,7 +406,7 @@ const StreakLeaderboardScreen = ({ navigation }) => {
 
             {searching && (
               <View style={styles.searchingContainer}>
-                <ActivityIndicator size="small" color={colors.primary} />
+                <ActivityIndicator size="small" color={darkColors.primary} />
                 <Text style={styles.searchingText}>Searching...</Text>
               </View>
             )}
@@ -410,41 +434,41 @@ const StreakLeaderboardScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: darkColors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: darkColors.background,
   },
   searchContainer: {
     flexDirection: 'row',
     padding: 12,
-    backgroundColor: '#fff',
+    backgroundColor: darkColors.card,
     marginHorizontal: 20,
     marginTop: 16,
     borderRadius: 12,
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 4,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: darkColors.border,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: darkColors.text,
     paddingVertical: 8,
     paddingHorizontal: 8,
   },
   searchButton: {
     padding: 8,
     marginLeft: 8,
-    backgroundColor: '#667eea',
+    backgroundColor: darkColors.primary,
     borderRadius: 8,
   },
   searchButtonText: {
@@ -454,11 +478,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginHorizontal: 20,
     marginTop: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: darkColors.surface,
     borderRadius: 12,
     padding: 4,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: darkColors.border,
   },
   tab: {
     flex: 1,
@@ -467,15 +491,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: '#667eea',
+    backgroundColor: darkColors.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
+    color: darkColors.textSecondary,
   },
   activeTabText: {
-    color: '#fff',
+    color: darkColors.text,
   },
   scrollView: {
     flex: 1,
@@ -483,23 +507,23 @@ const styles = StyleSheet.create({
   header: {
     padding: 32,
     alignItems: 'center',
-    backgroundColor: '#667eea',
+    backgroundColor: darkColors.primary,
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.4,
     shadowRadius: 10,
-    elevation: 6,
+    elevation: 8,
   },
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#fff',
+    color: darkColors.text,
     marginBottom: 8,
     textAlign: 'center',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
@@ -513,26 +537,26 @@ const styles = StyleSheet.create({
   leaderboardItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: darkColors.card,
     marginHorizontal: 20,
     marginVertical: 6,
     padding: 16,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.3,
     shadowRadius: 6,
-    elevation: 3,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: darkColors.border,
   },
   currentUserItem: {
     borderWidth: 2,
-    borderColor: '#667eea',
-    backgroundColor: '#f8f9ff',
-    shadowColor: '#667eea',
+    borderColor: darkColors.primary,
+    backgroundColor: darkColors.cardHighlight,
+    shadowColor: darkColors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
   },
@@ -544,7 +568,7 @@ const styles = StyleSheet.create({
   rankText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#333',
+    color: darkColors.text,
   },
   avatar: {
     width: 48,
@@ -552,7 +576,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     marginHorizontal: 12,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
+    borderColor: darkColors.border,
   },
   userInfo: {
     flex: 1,
@@ -560,7 +584,7 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: darkColors.text,
     marginBottom: 6,
   },
   statsRow: {
@@ -571,11 +595,13 @@ const styles = StyleSheet.create({
   stat: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: darkColors.surface,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
     flex: 1,
+    borderWidth: 1,
+    borderColor: darkColors.border,
   },
   statEmoji: {
     fontSize: 14,
@@ -584,83 +610,82 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#555',
+    color: darkColors.text,
   },
-  friendButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+  // Friend icon button styles
+  friendIconButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     marginLeft: 8,
-    minWidth: 80,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    justifyContent: 'center',
+    shadowColor: darkColors.shadow,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  addFriendButton: {
-    backgroundColor: '#667eea',
+  addFriendIconButton: {
+    backgroundColor: darkColors.primary,
   },
-  pendingButton: {
-    backgroundColor: '#ff9500',
+  pendingIconButton: {
+    backgroundColor: darkColors.warning,
   },
-  friendsButton: {
-    backgroundColor: '#34c759',
+  rejectedIconButton: {
+    backgroundColor: darkColors.error,
   },
-  rejectedButton: {
-    backgroundColor: '#ff3b30',
-  },
-  friendButtonText: {
-    color: '#fff',
-    fontSize: 12,
+  friendIconText: {
+    fontSize: 16,
     fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
     padding: 40,
-    backgroundColor: '#fff',
+    backgroundColor: darkColors.card,
     marginHorizontal: 20,
     marginTop: 20,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.3,
     shadowRadius: 6,
-    elevation: 3,
+    elevation: 4,
     borderWidth: 1,
-    borderColor: '#f0f0f0',
+    borderColor: darkColors.border,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: darkColors.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
+    color: darkColors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
   },
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: darkColors.overlay,
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: darkColors.modalBackground,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 20,
     maxHeight: '80%',
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
-    elevation: 6,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: darkColors.border,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -672,23 +697,23 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
+    color: darkColors.text,
   },
   closeButton: {
     fontSize: 24,
-    color: colors.textSecondary,
+    color: darkColors.textSecondary,
     padding: 4,
   },
   modalSearchInput: {
     fontSize: 16,
-    color: '#333',
+    color: darkColors.text,
     padding: 12,
     marginHorizontal: 20,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: darkColors.inputBackground,
     borderRadius: 12,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: darkColors.border,
   },
   searchingContainer: {
     flexDirection: 'row',
@@ -698,7 +723,7 @@ const styles = StyleSheet.create({
   },
   searchingText: {
     marginLeft: 8,
-    color: colors.textSecondary,
+    color: darkColors.textSecondary,
   },
   searchResultsList: {
     maxHeight: 400,
@@ -708,8 +733,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    borderBottomColor: darkColors.border,
+    backgroundColor: darkColors.card,
     marginHorizontal: 20,
     marginVertical: 2,
     borderRadius: 12,
@@ -720,7 +745,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 12,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: darkColors.border,
   },
   searchUserInfo: {
     flex: 1,
@@ -728,12 +753,12 @@ const styles = StyleSheet.create({
   searchUserName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: darkColors.text,
     marginBottom: 2,
   },
   searchUserEmail: {
     fontSize: 13,
-    color: '#666',
+    color: darkColors.textSecondary,
     lineHeight: 16,
   },
   noResultsContainer: {
@@ -742,7 +767,7 @@ const styles = StyleSheet.create({
   },
   noResultsText: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: darkColors.textSecondary,
   },
 });
 

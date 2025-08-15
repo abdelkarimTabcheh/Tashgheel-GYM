@@ -14,7 +14,6 @@ import {
 } from 'react-native';
 import { useSelector } from 'react-redux';
 import { API_BASE_URL_JO } from '../config';
-import { colors } from '../theme/colors';
 import Header from '../components/Header';
 import { 
   getNotifications, 
@@ -27,12 +26,35 @@ import {
   rejectFriendRequest 
 } from '../services/friendService';
 
+// Dark mode colors
+const darkColors = {
+  background: '#000000',
+  surface: '#1a1a1a',
+  card: '#2a2a2a',
+  primary: '#667eea',
+  primaryDark: '#5a6fd8',
+  text: '#ffffff',
+  textSecondary: '#b0b0b0',
+  textMuted: '#666666',
+  border: '#333333',
+  success: '#34c759',
+  warning: '#ff9500',
+  error: '#ff3b30',
+  shadow: 'rgba(0, 0, 0, 0.8)',
+  overlay: 'rgba(0, 0, 0, 0.7)',
+  accent: '#667eea',
+  cardHighlight: '#333333',
+  inputBackground: '#2a2a2a',
+  modalBackground: '#1a1a1a',
+};
+
 const NotificationScreen = ({ navigation }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [processingRequests, setProcessingRequests] = useState(new Set());
   const currentUserId = useSelector(s => s.user.profile?._id);
   const authToken = useSelector(s => s.auth.token);
 
@@ -101,44 +123,80 @@ const NotificationScreen = ({ navigation }) => {
   };
 
   const handleAcceptFriendRequest = async (notification) => {
+    const notificationId = notification._id;
+    
+    // Add to processing set to disable buttons
+    setProcessingRequests(prev => new Set(prev).add(notificationId));
+    
     try {
+      console.log('Accepting friend request:', notification.relatedData.friendRequestId);
+      
       await acceptFriendRequest(notification.relatedData.friendRequestId, authToken);
+      
+      // Mark as read
       await handleMarkAsRead(notification._id);
       
-      // Remove the notification from the list
-      setNotifications(prev => 
-        prev.filter(n => n._id !== notification._id)
-      );
+      // Immediately remove the notification from the list
+      setNotifications(prev => {
+        const updated = prev.filter(n => n._id !== notificationId);
+        console.log('Notifications after accept:', updated.length);
+        return updated;
+      });
       
-      // Refresh unread count
-      fetchUnreadCount();
+      // Update unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
       setRefreshTrigger(prev => prev + 1);
       
       Alert.alert('Success', 'Friend request accepted!');
     } catch (error) {
       console.error('Error accepting friend request:', error);
       Alert.alert('Error', error.message || 'Failed to accept friend request');
+    } finally {
+      // Remove from processing set
+      setProcessingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
     }
   };
 
   const handleRejectFriendRequest = async (notification) => {
+    const notificationId = notification._id;
+    
+    // Add to processing set to disable buttons
+    setProcessingRequests(prev => new Set(prev).add(notificationId));
+    
     try {
+      console.log('Rejecting friend request:', notification.relatedData.friendRequestId);
+      
       await rejectFriendRequest(notification.relatedData.friendRequestId, authToken);
+      
+      // Mark as read
       await handleMarkAsRead(notification._id);
       
-      // Remove the notification from the list
-      setNotifications(prev => 
-        prev.filter(n => n._id !== notification._id)
-      );
+      // Immediately remove the notification from the list
+      setNotifications(prev => {
+        const updated = prev.filter(n => n._id !== notificationId);
+        console.log('Notifications after reject:', updated.length);
+        return updated;
+      });
       
-      // Refresh unread count
-      fetchUnreadCount();
+      // Update unread count
+      setUnreadCount(prev => Math.max(0, prev - 1));
       setRefreshTrigger(prev => prev + 1);
       
       Alert.alert('Success', 'Friend request rejected');
     } catch (error) {
       console.error('Error rejecting friend request:', error);
       Alert.alert('Error', error.message || 'Failed to reject friend request');
+    } finally {
+      // Remove from processing set
+      setProcessingRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
     }
   };
 
@@ -153,15 +211,16 @@ const NotificationScreen = ({ navigation }) => {
 
   const getNotificationColor = (type) => {
     switch (type) {
-      case 'friend_request': return '#2196F3';
-      case 'friend_accepted': return '#4CAF50';
-      case 'friend_rejected': return '#F44336';
-      default: return colors.primary;
+      case 'friend_request': return darkColors.primary;
+      case 'friend_accepted': return darkColors.success;
+      case 'friend_rejected': return darkColors.error;
+      default: return darkColors.primary;
     }
   };
 
   const NotificationItem = ({ notification }) => {
     const isUnread = !notification.isRead;
+    const isProcessing = processingRequests.has(notification._id);
     
     return (
       <TouchableOpacity
@@ -170,9 +229,13 @@ const NotificationScreen = ({ navigation }) => {
           isUnread && styles.unreadNotification
         ]}
         onPress={() => handleMarkAsRead(notification._id)}
+        activeOpacity={0.7}
       >
         <View style={styles.notificationHeader}>
-          <View style={styles.notificationIcon}>
+          <View style={[
+            styles.notificationIcon,
+            { backgroundColor: getNotificationColor(notification.type) + '30' }
+          ]}>
             <Text style={styles.iconText}>
               {getNotificationIcon(notification.type)}
             </Text>
@@ -193,20 +256,29 @@ const NotificationScreen = ({ navigation }) => {
           {isUnread && <View style={styles.unreadDot} />}
         </View>
 
-        {notification.type === 'friend_request' && (
+        {notification.type === 'friend_request' && !isProcessing && (
           <View style={styles.friendRequestActions}>
             <TouchableOpacity
               style={[styles.actionButton, styles.acceptButton]}
               onPress={() => handleAcceptFriendRequest(notification)}
+              disabled={isProcessing}
             >
-              <Text style={styles.actionButtonText}>Accept</Text>
+              <Text style={styles.actionButtonText}>✅ Accept</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.actionButton, styles.rejectButton]}
               onPress={() => handleRejectFriendRequest(notification)}
+              disabled={isProcessing}
             >
-              <Text style={styles.actionButtonText}>Reject</Text>
+              <Text style={styles.actionButtonText}>❌ Reject</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {notification.type === 'friend_request' && isProcessing && (
+          <View style={styles.processingContainer}>
+            <ActivityIndicator size="small" color={darkColors.primary} />
+            <Text style={styles.processingText}>Processing...</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -217,7 +289,7 @@ const NotificationScreen = ({ navigation }) => {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <Header title="Notifications" onBackPress={() => navigation.goBack()} />
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color={darkColors.primary} />
       </SafeAreaView>
     );
   }
@@ -243,7 +315,12 @@ const NotificationScreen = ({ navigation }) => {
         renderItem={({ item }) => <NotificationItem notification={item} />}
         style={styles.notificationsList}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor={darkColors.primary}
+            colors={[darkColors.primary]}
+          />
         }
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
@@ -263,37 +340,37 @@ const NotificationScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: darkColors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: darkColors.background,
   },
   unreadBanner: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: colors.primary,
+    backgroundColor: darkColors.primary,
     paddingHorizontal: 20,
     paddingVertical: 16,
     marginHorizontal: 16,
     marginTop: 16,
     borderRadius: 16,
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.4,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 6,
   },
   unreadBannerText: {
-    color: '#fff',
+    color: darkColors.text,
     fontSize: 14,
     fontWeight: '600',
   },
   markAllReadText: {
-    color: '#fff',
+    color: darkColors.text,
     fontSize: 14,
     fontWeight: '600',
     textDecorationLine: 'underline',
@@ -304,19 +381,22 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   notificationItem: {
-    backgroundColor: colors.card,
+    backgroundColor: darkColors.card,
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.3,
     shadowRadius: 6,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: darkColors.border,
   },
   unreadNotification: {
     borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
+    borderLeftColor: darkColors.primary,
+    backgroundColor: darkColors.cardHighlight,
   },
   notificationHeader: {
     flexDirection: 'row',
@@ -326,15 +406,16 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: colors.primary + '20',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: darkColors.border,
   },
   iconText: {
     fontSize: 24,
@@ -345,24 +426,24 @@ const styles = StyleSheet.create({
   notificationTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.text,
+    color: darkColors.text,
     marginBottom: 6,
   },
   notificationMessage: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: darkColors.textSecondary,
     marginBottom: 10,
     lineHeight: 22,
   },
   notificationTime: {
     fontSize: 12,
-    color: colors.textSecondary,
+    color: darkColors.textMuted,
   },
   unreadDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.primary,
+    backgroundColor: darkColors.primary,
     marginLeft: 8,
     marginTop: 4,
   },
@@ -377,35 +458,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderRadius: 12,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   acceptButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: darkColors.success,
   },
   rejectButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: darkColors.error,
   },
   actionButtonText: {
-    color: '#fff',
+    color: darkColors.text,
     fontSize: 16,
     fontWeight: '700',
+  },
+  processingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: darkColors.surface,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: darkColors.border,
+  },
+  processingText: {
+    marginLeft: 8,
+    color: darkColors.textSecondary,
+    fontSize: 14,
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
     padding: 60,
-    backgroundColor: colors.card,
+    backgroundColor: darkColors.card,
     marginHorizontal: 16,
     marginTop: 20,
     borderRadius: 20,
-    shadowColor: '#000',
+    shadowColor: darkColors.shadow,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: darkColors.border,
   },
   emptyIcon: {
     fontSize: 64,
@@ -414,17 +514,16 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.text,
+    color: darkColors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 16,
-    color: colors.textSecondary,
+    color: darkColors.textSecondary,
     textAlign: 'center',
     lineHeight: 22,
   },
 });
 
 export default NotificationScreen;
-
