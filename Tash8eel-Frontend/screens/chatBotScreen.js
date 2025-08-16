@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   TextInput,
@@ -11,11 +11,17 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
+import { useSelector } from 'react-redux';
+import axios from 'axios';
+import chatBot from '../components/chatBot';
+import { colors } from '../theme/colors';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import { API_URL } from '../config';
 
 const { width, height } = Dimensions.get('window');
 
 // Color theme matching your design
-const colors = {
+const colorTheme = {
   background: '#121212', // A slightly darker background for better contrast
   card: '#1e1e1e', // Darker card color
   text: '#ffffff',
@@ -38,7 +44,10 @@ const CustomAlert = ({ visible, title, message, onCancel, onConfirm }) => {
           <TouchableOpacity style={styles.alertCancelButton} onPress={onCancel}>
             <Text style={styles.alertCancelButtonText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.alertConfirmButton} onPress={onConfirm}>
+          <TouchableOpacity
+            style={styles.alertConfirmButton}
+            onPress={onConfirm}
+          >
             <Text style={styles.alertConfirmButtonText}>Clear</Text>
           </TouchableOpacity>
         </View>
@@ -47,20 +56,24 @@ const CustomAlert = ({ visible, title, message, onCancel, onConfirm }) => {
   );
 };
 
-
 function ChatBotScreen() {
   const [messages, setMessages] = useState([
     {
       role: 'bot',
-      content: '💪 Welcome to FitBot! I\'m your personal fitness and nutrition expert. Whether you need workout routines, meal plans, or healthy lifestyle tips, I\'m here to help you reach your fitness goals! What would you like to know?',
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    }
+      content:
+        "💪 Welcome to FitBot! I'm your personal fitness and nutrition expert. Whether you need workout routines, meal plans, or healthy lifestyle tips, I'm here to help you reach your fitness goals! What would you like to know?",
+      timestamp: new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    },
   ]);
   const [userInput, setUserInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isOnline, setIsOnline] = useState(true);
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const scrollViewRef = useRef(null);
+  const token = useSelector(state => state.auth.token);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -71,13 +84,31 @@ function ChatBotScreen() {
     }, 100);
   }, [messages]);
 
+  useEffect(() => {
+    fetchHistory();
+  }, []);
+
+  const fetchHistory = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/chat/history`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMessages(response.data);
+    } catch (error) {
+      console.error('Error fetching chat history:', error);
+    }
+  };
+
   const sendMessage = async () => {
     if (!userInput.trim() || loading) return;
 
     const userMessage = {
       role: 'user',
       content: userInput,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+      timestamp: new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
     };
     setMessages(prev => [...prev, userMessage]);
     const currentInput = userInput;
@@ -85,122 +116,121 @@ function ChatBotScreen() {
     setLoading(true);
 
     try {
-      // API call to Hugging Face
-      const response = await fetch('https://api-inference.huggingface.co/models/microsoft/DialoGPT-medium', {
-        method: 'POST',
-        headers: {
-          
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inputs: `You are FitBot, a certified fitness and nutrition expert. You provide evidence-based advice on workouts, meal planning, supplements, and healthy lifestyle habits. Always prioritize safety and recommend consulting healthcare professionals for medical concerns. Keep responses helpful, motivational, and practical.
+      const response = await axios.post(
+        `${API_URL}/chat/send`,
+        { message: currentInput },
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
 
-User: ${currentInput}
-FitBot:`,
-          parameters: {
-            max_new_tokens: 120,
-            temperature: 0.7,
-            repetition_penalty: 1.1,
-            do_sample: true,
-          }
-        }),
-      });
-
-      let botReply = '';
-
-      if (!response.ok) {
-        if (response.status === 503) {
-          botReply = "I'm currently loading. Let me try to help you in another way: " + generateFallbackResponse(currentInput);
-        } else {
-          throw new Error(`HTTP ${response.status}`);
-        }
-      } else {
-        const data = await response.json();
-
-        if (Array.isArray(data) && data[0]?.generated_text) {
-          botReply = data[0].generated_text.replace(currentInput, '').trim();
-        } else if (data.generated_text) {
-          botReply = data.generated_text.replace(currentInput, '').trim();
-        } else if (data.error) {
-          botReply = "I'm currently processing other requests. Here's what I can tell you: " + generateFallbackResponse(currentInput);
-        } else {
-          botReply = generateFallbackResponse(currentInput);
-        }
-
-        // Clean up the response
-        if (!botReply || botReply === currentInput || botReply.length < 2) {
-          botReply = generateFallbackResponse(currentInput);
-        }
+      if (response.data && Array.isArray(response.data)) {
+        setMessages(prev => {
+          const newMessages = [...response.data].map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp).toLocaleTimeString('en-US', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+          }));
+          return newMessages;
+        });
       }
-
-      setMessages(prev => [...prev, {
-        role: 'bot',
-        content: botReply,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      }]);
       setIsOnline(true);
-
     } catch (error) {
       console.error('Error:', error);
       setIsOnline(false);
       const fallbackReply = generateFallbackResponse(currentInput);
-      setMessages(prev => [...prev, {
-        role: 'bot',
-        content: `${fallbackReply}\n\n(Note: Running in offline mode)`,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-      }]);
+      setMessages(prev => [
+        ...prev,
+        {
+          role: 'bot',
+          content: `${fallbackReply}\n\n(Note: Running in offline mode)`,
+          timestamp: new Date().toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+        },
+      ]);
     }
 
     setLoading(false);
   };
 
-  const generateFallbackResponse = (input) => {
+  const generateFallbackResponse = input => {
     const lowerInput = input.toLowerCase();
 
     // Fitness-related greetings
-    if (lowerInput.includes('hello') || lowerInput.includes('hi') || lowerInput.includes('hey')) {
+    if (
+      lowerInput.includes('hello') ||
+      lowerInput.includes('hi') ||
+      lowerInput.includes('hey')
+    ) {
       return "Hello there, fitness enthusiast! 💪 I'm FitBot, your personal trainer and nutrition expert. Ready to crush your fitness goals together? What can I help you with today?";
     }
 
     // Workout requests
-    if (lowerInput.includes('workout') || lowerInput.includes('exercise') || lowerInput.includes('training')) {
+    if (
+      lowerInput.includes('workout') ||
+      lowerInput.includes('exercise') ||
+      lowerInput.includes('training')
+    ) {
       const workouts = [
         "Great question about workouts! For beginners, I recommend starting with 3 full-body sessions per week: squats, push-ups, planks, and walking. What's your current fitness level?",
-        "Effective workouts depend on your goals! Are you looking to build muscle, lose weight, or improve endurance? I can create a personalized plan for you!",
-        "Love the motivation! A solid workout includes: 5-min warm-up, 20-30min strength training, 10-15min cardio, and 5-min cool-down. What type of exercises do you enjoy?",
-        "For maximum results, consistency beats intensity! Start with 3-4 workouts per week, focusing on compound movements like squats, deadlifts, and push-ups. Need a specific routine?"
+        'Effective workouts depend on your goals! Are you looking to build muscle, lose weight, or improve endurance? I can create a personalized plan for you!',
+        'Love the motivation! A solid workout includes: 5-min warm-up, 20-30min strength training, 10-15min cardio, and 5-min cool-down. What type of exercises do you enjoy?',
+        'For maximum results, consistency beats intensity! Start with 3-4 workouts per week, focusing on compound movements like squats, deadlifts, and push-ups. Need a specific routine?',
       ];
       return workouts[Math.floor(Math.random() * workouts.length)];
     }
 
     // Diet and nutrition
-    if (lowerInput.includes('diet') || lowerInput.includes('nutrition') || lowerInput.includes('food') || lowerInput.includes('meal')) {
+    if (
+      lowerInput.includes('diet') ||
+      lowerInput.includes('nutrition') ||
+      lowerInput.includes('food') ||
+      lowerInput.includes('meal')
+    ) {
       const nutrition = [
-        "Nutrition is 70% of your fitness journey! Focus on whole foods: lean proteins, complex carbs, healthy fats, and lots of vegetables. What are your current eating habits?",
+        'Nutrition is 70% of your fitness journey! Focus on whole foods: lean proteins, complex carbs, healthy fats, and lots of vegetables. What are your current eating habits?',
         "For optimal results: eat protein with every meal, stay hydrated (8+ glasses water daily), and time your carbs around workouts. What's your main nutrition goal?",
-        "Meal planning is key! Try prepping proteins, vegetables, and grains in bulk. A balanced plate: 1/2 vegetables, 1/4 lean protein, 1/4 complex carbs. Need recipe ideas?",
-        "Remember: no food is 'bad' - it's about balance! Focus on the 80/20 rule: eat nutritiously 80% of the time. What specific nutrition questions do you have?"
+        'Meal planning is key! Try prepping proteins, vegetables, and grains in bulk. A balanced plate: 1/2 vegetables, 1/4 lean protein, 1/4 complex carbs. Need recipe ideas?',
+        "Remember: no food is 'bad' - it's about balance! Focus on the 80/20 rule: eat nutritiously 80% of the time. What specific nutrition questions do you have?",
       ];
       return nutrition[Math.floor(Math.random() * nutrition.length)];
     }
 
     // Weight loss
-    if (lowerInput.includes('weight loss') || lowerInput.includes('lose weight') || lowerInput.includes('fat loss')) {
+    if (
+      lowerInput.includes('weight loss') ||
+      lowerInput.includes('lose weight') ||
+      lowerInput.includes('fat loss')
+    ) {
       return "Weight loss = calories in < calories out! But let's do it healthily: combine strength training, cardio, and a balanced diet. Aim for 1-2lbs per week. What's your current approach?";
     }
 
     // Muscle building
-    if (lowerInput.includes('muscle') || lowerInput.includes('gain') || lowerInput.includes('bulk')) {
+    if (
+      lowerInput.includes('muscle') ||
+      lowerInput.includes('gain') ||
+      lowerInput.includes('bulk')
+    ) {
       return "Building muscle requires: progressive overload in training, adequate protein (0.7-1g per lb bodyweight), sufficient calories, and 7-9 hours sleep. What's your training experience?";
     }
 
     // Supplements
-    if (lowerInput.includes('supplement') || lowerInput.includes('protein powder') || lowerInput.includes('creatine')) {
-      return "Supplements complement, not replace, good nutrition! The basics: whey protein (if needed), creatine monohydrate, vitamin D, and omega-3s. Food first though! What are you considering?";
+    if (
+      lowerInput.includes('supplement') ||
+      lowerInput.includes('protein powder') ||
+      lowerInput.includes('creatine')
+    ) {
+      return 'Supplements complement, not replace, good nutrition! The basics: whey protein (if needed), creatine monohydrate, vitamin D, and omega-3s. Food first though! What are you considering?';
     }
 
     // Motivation and goals
-    if (lowerInput.includes('motivation') || lowerInput.includes('goal') || lowerInput.includes('start')) {
+    if (
+      lowerInput.includes('motivation') ||
+      lowerInput.includes('goal') ||
+      lowerInput.includes('start')
+    ) {
       return "Every fitness journey starts with a single step! Set SMART goals: Specific, Measurable, Achievable, Relevant, Time-bound. You've got this! 💪 What's your main fitness goal?";
     }
 
@@ -215,33 +245,46 @@ FitBot:`,
     }
 
     // About FitBot
-    if (lowerInput.includes('what are you') || lowerInput.includes('who are you')) {
+    if (
+      lowerInput.includes('what are you') ||
+      lowerInput.includes('who are you')
+    ) {
       return "I'm FitBot, your AI-powered fitness and nutrition expert! I'm here 24/7 to provide evidence-based advice on workouts, meal planning, and healthy living. Think of me as your pocket personal trainer! 💪";
     }
 
     // Injury/pain related
-    if (lowerInput.includes('pain') || lowerInput.includes('injury') || lowerInput.includes('hurt')) {
-      return "⚠️ For any pain or injury concerns, please consult a healthcare professional or physiotherapist first. I can help with general fitness advice, but your safety comes first! Stay healthy! 🏥";
+    if (
+      lowerInput.includes('pain') ||
+      lowerInput.includes('injury') ||
+      lowerInput.includes('hurt')
+    ) {
+      return '⚠️ For any pain or injury concerns, please consult a healthcare professional or physiotherapist first. I can help with general fitness advice, but your safety comes first! Stay healthy! 🏥';
     }
 
     // Cardio
-    if (lowerInput.includes('cardio') || lowerInput.includes('running') || lowerInput.includes('walking')) {
-      return "Cardio is fantastic for heart health! Mix it up: steady-state (jogging, cycling) and HIIT (high-intensity intervals). Start with 20-30 min, 3x per week. What cardio activities do you enjoy?";
+    if (
+      lowerInput.includes('cardio') ||
+      lowerInput.includes('running') ||
+      lowerInput.includes('walking')
+    ) {
+      return 'Cardio is fantastic for heart health! Mix it up: steady-state (jogging, cycling) and HIIT (high-intensity intervals). Start with 20-30 min, 3x per week. What cardio activities do you enjoy?';
     }
 
     // Default fitness responses
     const fitnessResponses = [
       "That's a great fitness question! Every journey is unique. What specific aspect would you like to dive deeper into - training, nutrition, or lifestyle?",
       "I love your enthusiasm for health and fitness! Let's break this down step by step. What's your current fitness level and main goal?",
-      "Excellent topic! In fitness, consistency trumps perfection every time. How can I help you stay on track with your health goals?",
+      'Excellent topic! In fitness, consistency trumps perfection every time. How can I help you stay on track with your health goals?',
       "That's definitely worth exploring! Remember, sustainable changes beat quick fixes. What would be most helpful for your fitness journey right now?",
-      "Great question! The best fitness plan is one you can stick to long-term. What type of activities do you actually enjoy doing?",
-      "I appreciate you asking about that! Success in fitness comes from combining smart training, proper nutrition, and adequate recovery. Which area needs the most attention?",
+      'Great question! The best fitness plan is one you can stick to long-term. What type of activities do you actually enjoy doing?',
+      'I appreciate you asking about that! Success in fitness comes from combining smart training, proper nutrition, and adequate recovery. Which area needs the most attention?',
       "That's an important consideration for your health journey! Let's focus on evidence-based strategies. What specific results are you hoping to achieve?",
-      "Fantastic that you're prioritizing your health! Small, consistent steps lead to amazing transformations. How can I support your fitness goals today? 💪"
+      "Fantastic that you're prioritizing your health! Small, consistent steps lead to amazing transformations. How can I support your fitness goals today? 💪",
     ];
 
-    return fitnessResponses[Math.floor(Math.random() * fitnessResponses.length)];
+    return fitnessResponses[
+      Math.floor(Math.random() * fitnessResponses.length)
+    ];
   };
 
   const handleClearChat = () => {
@@ -249,11 +292,17 @@ FitBot:`,
   };
 
   const confirmClearChat = () => {
-    setMessages([{
-      role: 'bot',
-      content: '💪 New session started! I\'m FitBot, ready to help you achieve your fitness goals. What would you like to work on today?',
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
-    }]);
+    setMessages([
+      {
+        role: 'bot',
+        content:
+          "💪 New session started! I'm FitBot, ready to help you achieve your fitness goals. What would you like to work on today?",
+        timestamp: new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+      },
+    ]);
     setIsAlertVisible(false);
   };
 
@@ -272,13 +321,12 @@ FitBot:`,
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>💪 FitBot - Fitness Expert</Text>
           <Text style={styles.headerSubtitle}>
-            {isOnline ? '🟢 Ready to help with fitness & nutrition' : '🔴 Offline Mode - Basic fitness tips available'}
+            {isOnline
+              ? '🟢 Ready to help with fitness & nutrition'
+              : '🔴 Offline Mode - Basic fitness tips available'}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.clearButton}
-          onPress={handleClearChat}
-        >
+        <TouchableOpacity style={styles.clearButton} onPress={handleClearChat}>
           <Text style={styles.clearButtonText}>Clear</Text>
         </TouchableOpacity>
       </View>
@@ -295,14 +343,18 @@ FitBot:`,
             <View
               style={[
                 styles.messageBubble,
-                msg.role === 'user' ? styles.userMsgBubble : styles.botMsgBubble,
+                msg.role === 'user'
+                  ? styles.userMsgBubble
+                  : styles.botMsgBubble,
               ]}
             >
               <View style={styles.messageHeader}>
-                <Text style={[
-                  styles.roleLabel,
-                  msg.role === 'user' ? styles.userRole : styles.botRole
-                ]}>
+                <Text
+                  style={[
+                    styles.roleLabel,
+                    msg.role === 'user' ? styles.userRole : styles.botRole,
+                  ]}
+                >
                   {msg.role === 'user' ? '🏃‍♀️ You' : '💪 FitBot'}
                 </Text>
                 <Text style={styles.timestamp}>{msg.timestamp}</Text>
@@ -310,7 +362,7 @@ FitBot:`,
               <Text
                 style={[
                   styles.messageText,
-                  msg.role === 'user' ? styles.userMsgText : styles.botMsgText
+                  msg.role === 'user' ? styles.userMsgText : styles.botMsgText,
                 ]}
               >
                 {msg.content}
@@ -351,14 +403,12 @@ FitBot:`,
           <TouchableOpacity
             style={[
               styles.sendButton,
-              (!userInput.trim() || loading) && styles.disabledButton
+              (!userInput.trim() || loading) && styles.disabledButton,
             ]}
             onPress={sendMessage}
             disabled={!userInput.trim() || loading}
           >
-            <Text style={styles.sendButtonText}>
-              {loading ? '⏳' : '▶️'}
-            </Text>
+            <Text style={styles.sendButtonText}>{loading ? '⏳' : '▶️'}</Text>
           </TouchableOpacity>
         </View>
         <Text style={styles.inputHint}>
@@ -614,10 +664,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function App() {
-  return (
-    <View style={{ flex: 1 }}>
-      <ChatBotScreen />
-    </View>
-  );
-}
+export default ChatBotScreen;
