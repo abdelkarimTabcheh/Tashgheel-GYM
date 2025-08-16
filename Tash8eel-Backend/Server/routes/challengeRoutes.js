@@ -17,16 +17,30 @@ router.get('/', async (req, res) => {
 });
 
 // Get challenge + user progress
+// routes/challengeRoutes.js (only the GET /:id part changed)
 router.get('/:id', async (req, res) => {
   try {
     const { userId } = req.query;
-    const challenge = await Challenge.findById(req.params.id)
+
+    let challenge = await Challenge.findById(req.params.id)
       .populate('workouts.workoutId');
+
+    if (!challenge) {
+      return res.status(404).json({ error: 'Challenge not found' });
+    }
+
+    // Filter out lines where populate failed (dangling refs)
+    challenge.workouts = (challenge.workouts || []).filter(
+      w => w && w.workoutId && w.workoutId._id
+    );
+
     const progress = userId
       ? await UserChallenge.findOne({ userId, challengeId: challenge._id })
       : null;
+
     res.json({ challenge, progress });
   } catch (err) {
+    console.error(err);
     res.status(500).json({ error: 'Failed to fetch challenge' });
   }
 });

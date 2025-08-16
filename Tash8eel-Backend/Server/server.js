@@ -58,6 +58,9 @@ app.use('/api/friends', friendRoutes);
 const notificationRoutes = require('./routes/notificationRoutes');
 app.use('/api/notifications', notificationRoutes);
 
+
+const habitRoutes = require('./routes/habitRoutes'); app.use('/api/habits', habitRoutes);
+
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`Server running at http://localhost:${PORT}`);
 });
